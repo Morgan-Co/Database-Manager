@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
+project(db_training)
+find_package(unofficial-sqlite3 CONFIG REQUIRED)
+add_executable(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} unofficial::sqlite3::sqlite3)
