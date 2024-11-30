@@ -2,14 +2,17 @@
 #include <string>
 #include <sqlite3.h>
 #include <cstdlib>
+#include <fstream>
+#include <vector>
+#include <map>
 
 void print_info() {
 	std::cout << "+ - add new user\n";
 	std::cout << "- - delete user\n";
 	std::cout << "g - get user\n";
 	std::cout << "ga - get all data\n";
-	std::cout << "x - exit from table\n";
-	std::cout << "del - delete database\n";
+	std::cout << "x - close table\n";
+	std::cout << "del - delete table\n";
 	std::cout << std::endl;
 }
 
@@ -114,19 +117,65 @@ int getOnce(sqlite3 *db, sqlite3_stmt *stmt, std::string& tableName) {
 }
 
 //int close
-int getTables(sqlite3 *db, sqlite3_stmt *stmt) {
+std::vector<std::string> getTables(sqlite3 *db, sqlite3_stmt *stmt) {
 	const char* sqlTables = "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';";
+	std::vector<std::string> tableNames;
 
 	if (sqlite3_prepare_v2(db, sqlTables, -1, &stmt, nullptr) != SQLITE_OK) {
 		std::cerr << "SQL query preparation error: " << sqlite3_errmsg(db) << std::endl;
-		return -1;
+		return tableNames;
 	}
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
 		const unsigned char* tableName = sqlite3_column_text(stmt, 0);
+		tableNames.push_back(std::string(reinterpret_cast<const char*>(tableName)));
 		std::cout << "- " << tableName << std::endl;
 	}
+
+	return tableNames;
 }
+
+void getTableFileds(sqlite3 *db, sqlite3_stmt * stmt, const std::string& tableName) {
+	std::string query = "PRAGMA table_info(" + tableName + ");";
+
+	if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+		std::cerr << "SQL query preparation error: " << sqlite3_errmsg(db) << std::endl;
+		return;
+	}
+
+	while (sqlite3_step(stmt) == SQLITE_ROW) {
+		const unsigned char* fieldName = sqlite3_column_text(stmt, 1);
+		std::cout << "- " << fieldName << std::endl;
+		
+	}
+}
+
+void deleteTable(sqlite3 *db, sqlite3_stmt *stmt, const std::string& tableName) {
+	std::string query = "DROP TABLE IF EXISTS " + tableName + ";";
+
+	if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+		std::cerr << "SQL query preparation error: " << sqlite3_errmsg(db) << std::endl;
+		return;
+	}
+
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		std::cerr << "Request execution error: " << sqlite3_errmsg(db) << std::endl;
+		return;
+	}
+
+	std::cout << "Table \n" << tableName << "\" has been successfully deleted!" << std::endl;
+
+}
+
+
+
+//void createTable(sqlite3* db, sqlite3_stmt* stmt, const std::string& tableName, const std::map<std::string, std::string>& tableFields) {
+//	std::string query =
+//		"CREATE TABLE IF NOT EXISTS " + tableName + " (";
+//	for (const auto& pair : tableFields) {
+//		query += pair.first
+//	}
+//}
 
 int main() {
 	std::cout << "--------------------------------------------------------" << std::endl;
@@ -137,37 +186,84 @@ int main() {
 		std::cout << "Enter an action (*-create new database, o - open database): ";
 		std::cin >> action;
 
-		sqlite3* db;
+		sqlite3* db = nullptr;
 		sqlite3_stmt* stmt = nullptr;
 		int exit;
 
-		if (action == "*")
+		std::string db_name;
+		std::cout << "Enter database name: ";
+		std::cin >> db_name;
+		if (action == "o")
 		{
-			std::string db_name;
-			std::cout << "Enter database name: ";
-			std::cin >> db_name;
 			exit = sqlite3_open(db_name.c_str(), &db);
 
+			const char* sqlCreateTable =
+				"CREATE TABLE IF NOT EXISTS users ("
+				"id INTEGER PRIMARY KEY AUTOINCREMENT, "
+				"name TEXT NOT NULL, "
+				"age INTEGER NOT NULL);";
+
+			// Выполняем запрос
+			exit = sqlite3_exec(db, sqlCreateTable, nullptr, nullptr, nullptr);
 			if (exit != SQLITE_OK) {
 				std::cout << "Error: " << sqlite3_errmsg(db) << std::endl;
 				return -1;
 			}
-
 			std::cout << "Enter an action (+ - create new table, s - select a table): ";
-			std::cin >> action;
+		}
+		if (action == "*")
+		{
+			std::ofstream file(db_name);
+			if (file.is_open()) {
+				std::cout << "File " << db_name << " has been successfuly created." << std::endl;
+				file.close();
+			}
+			else {
+				std::cerr << "Failed to create a file " << db_name << std::endl;
+			}
+			std::cout << "Enter an action (+ - create new table): ";
+		}
 
-			std::string currentTable;
+
+		//std::cout << "Enter an action (+ - create new table, s - select a table): ";
+		std::cin >> action;
+
+		std::string currentTable;
+		//std::cout << getTables(db, stmt).empty() << std::endl;
+		bool exit_from_table = false;
+		while (true) {
+
 			if (action == "s") {
 				getTables(db, stmt);
 				std::cout << "Choose a table: ";
 				std::cin >> currentTable;
 				std::cout << "Switched on " << currentTable << std::endl;
 			}
+			else {
+				//std::cout << "You must create new table!" << std::endl;
+			}
+			//getTableFileds(db, stmt, currentTable);
 			if (action == "+") {
 				std::cout << "Enter a table name: ";
 				std::cin >> currentTable;
-			}
 
+				int fields_number;
+				std::cout << "Enter the number of fields: ";
+				std::cin >> fields_number;
+				std::map<std::string, std::string> fields;
+				for (int i = 0; i < fields_number; i++) {
+					std::string name;
+					std::string type;
+
+					std::cout << "Enter name of filed: ";
+					std::cin >> name;
+					std::cout << "Enter type of filed: ";
+					std::cin >> type;
+
+					fields[name] = type;
+					//createTable(db, stmt, currentTable, fields);
+				}
+			}
 
 			while (true) {
 				std::cout << "Enter an action (? - print info): ";
@@ -179,9 +275,19 @@ int main() {
 				if (action == "ga") getAll(db, stmt, currentTable);
 				if (action == "g") getOnce(db, stmt, currentTable);
 				if (action == "x") {
-					sqlite3_close(db);
-					std::cout << "Database has been closed!" << std::endl;
+					action = "s";
 					break;
+				}
+				if (action == "del") {
+					char confirm;
+					std::cout << "Are you sure you want to delete the table " << currentTable << "(y - yes, n - no): ";
+					std::cin >> confirm;
+					if (confirm == 'y') {
+						deleteTable(db, stmt, currentTable);
+					}
+					else if(confirm == 'n') {
+						break;
+					}
 				}
 			}
 		}
