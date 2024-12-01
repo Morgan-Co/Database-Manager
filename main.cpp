@@ -4,7 +4,15 @@
 #include <cstdlib>
 #include <fstream>
 #include <vector>
-#include <map>
+#include <unordered_map>
+
+struct Field {
+	std::string name;
+	std::string type;
+	bool is_primary;
+	Field(std::string name, std::string type, bool is_primary)
+		: name(name), type(type), is_primary(is_primary) {}
+};
 
 void print_info() {
 	std::cout << "+ - add new user\n";
@@ -14,35 +22,6 @@ void print_info() {
 	std::cout << "x - close table\n";
 	std::cout << "del - delete table\n";
 	std::cout << std::endl;
-}
-
-void addEntry(sqlite3 *db, sqlite3_stmt *stmt, std::string &tableName) {
-	std::string name;
-	int age;
-
-	std::cout << "Enter a name: ";
-	std::cin >> name;
-	std::cout << "Enter an age: ";
-	std::cin >> age;
-
-	std::string sqlInsert = "INSERT INTO " + tableName + " (name, age) VALUES (?, ?);";
-
-	if (sqlite3_prepare_v2(db, sqlInsert.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-		std::cerr << "SQL query preparation error: " << sqlite3_errmsg(db) << std::endl;
-		return;
-	}
-
-
-	sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
-	sqlite3_bind_int(stmt, 2, age);
-
-	if (sqlite3_step(stmt) != SQLITE_DONE) {
-		std::cerr << "Request execution error: " << sqlite3_errmsg(db) << std::endl;
-	}
-	else {
-		std::cout << "The data has been successfully added!" << std::endl;
-	}
-
 }
 
 void deleteEntry(sqlite3 *db, sqlite3_stmt *stmt, std::string& tableName) {
@@ -116,7 +95,6 @@ int getOnce(sqlite3 *db, sqlite3_stmt *stmt, std::string& tableName) {
 	return 0;
 }
 
-//int close
 std::vector<std::string> getTables(sqlite3 *db, sqlite3_stmt *stmt) {
 	const char* sqlTables = "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';";
 	std::vector<std::string> tableNames;
@@ -135,19 +113,23 @@ std::vector<std::string> getTables(sqlite3 *db, sqlite3_stmt *stmt) {
 	return tableNames;
 }
 
-void getTableFileds(sqlite3 *db, sqlite3_stmt * stmt, const std::string& tableName) {
+std::unordered_map<std::string, std::string> getTableFileds(sqlite3 *db, sqlite3_stmt * stmt, const std::string& tableName) {
 	std::string query = "PRAGMA table_info(" + tableName + ");";
+	std::unordered_map<std::string, std::string> fields;
 
 	if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
 		std::cerr << "SQL query preparation error: " << sqlite3_errmsg(db) << std::endl;
-		return;
+		return fields;
 	}
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
 		const unsigned char* fieldName = sqlite3_column_text(stmt, 1);
+		if (fieldName && std::string(reinterpret_cast<const char*>(fieldName)) != "id") {
+			fields[std::string(reinterpret_cast<const char*>(fieldName))];
+		}
 		std::cout << "- " << fieldName << std::endl;
-		
 	}
+	return fields;
 }
 
 void deleteTable(sqlite3 *db, sqlite3_stmt *stmt, const std::string& tableName) {
@@ -167,15 +149,63 @@ void deleteTable(sqlite3 *db, sqlite3_stmt *stmt, const std::string& tableName) 
 
 }
 
+bool createTable(sqlite3* db, sqlite3_stmt* stmt, const std::string& tableName, const std::unordered_map<std::string, std::string>& tableFields) {
+	int exit;
+	std::string query =
+		"CREATE TABLE IF NOT EXISTS " + tableName + " (id INTEGER PRIMARY KEY AUTOINCREMENT, ";
+
+	for (auto it = tableFields.begin(); it != tableFields.end(); it++) {
+		query += it->first + " " + it->second + " NOT NULL" + (std::next(it) != tableFields.end() ? ", " : "");
+	
+	}
+	query += ");";
+	std::cout << query << std::endl;
+
+	exit = sqlite3_exec(db, query.c_str(), nullptr, nullptr, nullptr);
+	if (exit != SQLITE_OK) {
+		std::cout << "Error: " << sqlite3_errmsg(db) << std::endl;
+		return false;
+	}
+	return true;
+}
+
+void addEntry(sqlite3* db, sqlite3_stmt* stmt, std::string& tableName) {
+	std::string name;
+	int age;
+	std::unordered_map<std::string, std::string> fields = getTableFileds(db, stmt, tableName);
+	//std::string query = "INSERT INTO " + tableName + " (name, age) VALUES (?, ?);";
+	std::string query = "INSERT INTO " + tableName + " (";
+
+	for (auto it = fields.begin(); it != fields.end(); it++) {
+		std::cout << it->first << ": ";
+		std::cin >> it->second;
+		query += it->first + (std::next(it) != fields.end() ? ", " : "");
+	}
+	query += ") VALUES (";
+	for (auto it = fields.begin(); it != fields.end(); it++) {
+		query += (std::next(it) != fields.end() ? "?, " : "?");
+	}
+	query += ");";
+	std::cout << query << std::endl;
 
 
-//void createTable(sqlite3* db, sqlite3_stmt* stmt, const std::string& tableName, const std::map<std::string, std::string>& tableFields) {
-//	std::string query =
-//		"CREATE TABLE IF NOT EXISTS " + tableName + " (";
-//	for (const auto& pair : tableFields) {
-//		query += pair.first
-//	}
-//}
+	/*if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+		std::cerr << "SQL query preparation error: " << sqlite3_errmsg(db) << std::endl;
+		return;
+	}
+
+
+	sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_int(stmt, 2, age);
+
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		std::cerr << "Request execution error: " << sqlite3_errmsg(db) << std::endl;
+	}
+	else {
+		std::cout << "The data has been successfully added!" << std::endl;
+	}*/
+
+}
 
 int main() {
 	std::cout << "--------------------------------------------------------" << std::endl;
@@ -224,12 +254,9 @@ int main() {
 			std::cout << "Enter an action (+ - create new table): ";
 		}
 
-
-		//std::cout << "Enter an action (+ - create new table, s - select a table): ";
 		std::cin >> action;
 
 		std::string currentTable;
-		//std::cout << getTables(db, stmt).empty() << std::endl;
 		bool exit_from_table = false;
 		while (true) {
 
@@ -242,7 +269,6 @@ int main() {
 			else {
 				//std::cout << "You must create new table!" << std::endl;
 			}
-			//getTableFileds(db, stmt, currentTable);
 			if (action == "+") {
 				std::cout << "Enter a table name: ";
 				std::cin >> currentTable;
@@ -250,18 +276,24 @@ int main() {
 				int fields_number;
 				std::cout << "Enter the number of fields: ";
 				std::cin >> fields_number;
-				std::map<std::string, std::string> fields;
+				std::unordered_map<std::string, std::string> fields;
 				for (int i = 0; i < fields_number; i++) {
+					system("cls");
 					std::string name;
 					std::string type;
 
-					std::cout << "Enter name of filed: ";
+					std::cout << "Field " << (i + 1) << " -------------------" << std::endl;
+					std::cout << "name: ";
 					std::cin >> name;
-					std::cout << "Enter type of filed: ";
+					std::cout << "type: ";
 					std::cin >> type;
 
 					fields[name] = type;
-					//createTable(db, stmt, currentTable, fields);
+				}
+				system("cls");
+				bool result = createTable(db, stmt, currentTable, fields);
+				if (result) {
+					std::cout << "Table " << currentTable << " has been successfully created!" << std::endl;
 				}
 			}
 
