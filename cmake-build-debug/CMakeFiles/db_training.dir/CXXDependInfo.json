@@ -5,14 +5,14 @@
 	"compiler-simulate-id" : "",
 	"config" : "Debug",
 	"cxx-modules" : {},
-	"dir-cur-bld" : "/home/morgan/Morgan-Co/C++/db_training/cmake-build-debug",
-	"dir-cur-src" : "/home/morgan/Morgan-Co/C++/db_training",
-	"dir-top-bld" : "/home/morgan/Morgan-Co/C++/db_training/cmake-build-debug",
-	"dir-top-src" : "/home/morgan/Morgan-Co/C++/db_training",
+	"dir-cur-bld" : "/home/morgan/Morgan-Co/C++/DatabaseTraining/cmake-build-debug",
+	"dir-cur-src" : "/home/morgan/Morgan-Co/C++/DatabaseTraining",
+	"dir-top-bld" : "/home/morgan/Morgan-Co/C++/DatabaseTraining/cmake-build-debug",
+	"dir-top-src" : "/home/morgan/Morgan-Co/C++/DatabaseTraining",
 	"exports" : [],
 	"forward-modules-from-target-dirs" : [],
 	"include-dirs" : [],
 	"language" : "CXX",
 	"linked-target-dirs" : [],
-	"module-dir" : "/home/morgan/Morgan-Co/C++/db_training/cmake-build-debug/CMakeFiles/db_training.dir"
+	"module-dir" : "/home/morgan/Morgan-Co/C++/DatabaseTraining/cmake-build-debug/CMakeFiles/db_training.dir"
 }
