@@ -1,3 +1,0 @@
-/home/morgan/Morgan-Co/C++/DatabaseTraining/cmake-build-debug/CMakeFiles/db_training.dir
-/home/morgan/Morgan-Co/C++/DatabaseTraining/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/morgan/Morgan-Co/C++/DatabaseTraining/cmake-build-debug/CMakeFiles/rebuild_cache.dir

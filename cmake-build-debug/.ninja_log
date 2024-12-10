@@ -1,7 +1,0 @@
-# ninja log v6
-5504	5988	1733838611910894941	db_training	6d4791124c7bbec8
-1833	5497	1733838608237492070	CMakeFiles/db_training.dir/main.cpp.o	fba028208888adb5
-1740	1833	1733838608147490367	CMakeFiles/db_training.dir/main.cpp.o.modmap	fc269a14f1e6502e
-1740	1833	1733838608147490367	CMakeFiles/db_training.dir/CXX.dd	fc269a14f1e6502e
-9	1737	1733838606417457651	CMakeFiles/db_training.dir/main.cpp.o.ddi	f5e3342bde3634d7
-9	165	1733839455165039094	build.ninja	449e92359a33a504
